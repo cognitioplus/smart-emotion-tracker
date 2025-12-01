@@ -1,0 +1,21 @@
+{
+  "name": "Smart Emotion Tracker",
+  "short_name": "MoodTrack",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#b425aa",
+  "theme_color": "#b425aa",
+  "description": "Track your emotions, intensity, and triggers using the four quadrants model.",
+  "icons": [
+    {
+      "src": "https://appimize.app/assets/apps/user_1097/images/af5331a08cd5_576_1097.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://appimize.app/assets/apps/user_1097/images/af5331a08cd5_576_1097.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

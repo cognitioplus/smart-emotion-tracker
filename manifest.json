@@ -3,7 +3,7 @@
   "short_name": "MoodTrack",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#b425aa",
+  "background_color": "#fffff",
   "theme_color": "#b425aa",
   "description": "Track your emotions, intensity, and triggers using the four quadrants model.",
   "icons": [

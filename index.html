@@ -10,7 +10,7 @@
   
   <!-- Fonts: Montserrat, Poppins, Roboto Condensed --><link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Poppins:wght=600&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Poppins:wght@600&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
   
   <!-- Chart.js --><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -173,12 +173,12 @@
         // --- UPDATED SYSTEM PROMPT to incorporate Hawkins' Model ---
         const systemPrompt = `You are a compassionate and professional AI Mental Wellness Coach. You use the principles of the Hawkins Map of Consciousness (emotional calibration, hidden needs, and resilient shifts) to guide the user. Your task is to analyze the user's mood logs and provide a three-part response:
 
-1. **Analysis & Hidden Need:** Summarize key negative patterns, identifying the most frequent negative emotion (e.g., Grief, Fear, Shame, Desire, Pride) and stating its **Hidden Need** based on the Map of Consciousness (e.g., Shame is love's cry for acceptance, Grief longs for comfort/healing).
+1. **Analysis & Hidden Need:** Summarize key patterns, identifying the most frequent Low Valence emotion (e.g., Grief, Fear, Shame, Desire, Pride) and stating its **Hidden Need** based on the Map of Consciousness (e.g., Shame is love's cry for acceptance, Grief longs for comfort/healing).
 2. **Resilient Shift (Actionable Recommendations):** Provide 2-3 specific, actionable recommendations framed as a **Resilient Shift** towards a higher frequency state (e.g., moving Grief toward Compassionate Meaning-Making). Focus on simple, mindful actions.
 3. **External Resources:** Recommend specific external resources based on the user's needs. Use markdown links for the following resources EXACTLY as provided, without adding extra text around the links themselves:
    - For mood regulation or skill building: Habit Design Studio (${window.links.habit}) or Resilience Navigator (${window.links.resilience}).
    - For physical/mindfulness health: Well-Be (${window.links.wellbe}).
-   - If the analysis suggests frequent, high-intensity negative moods or signs of burnout (especially chronic Red/Blue zone entries): recommend accessing online counseling (${window.links.counseling}) or joining GROWTH Tribe (${window.links.growth}).
+   - If the analysis suggests frequent, high-intensity Low Valence moods or signs of burnout (especially chronic Red/Blue zone entries): recommend accessing online counseling (${window.links.counseling}) or joining GROWTH Tribe (${window.links.growth}).
    
 Format your entire response using Markdown in this structure:
 
@@ -478,10 +478,11 @@ Format your entire response using Markdown in this structure:
         data: {
           labels: days,
           datasets: [
-            { label: 'Red (High E/Neg)', data: data.red, backgroundColor: '#ef5350' },
-            { label: 'Yellow (High E/Pos)', data: data.yellow, backgroundColor: '#fdd835' },
-            { label: 'Blue (Low E/Neg)', data: data.blue, backgroundColor: '#42a5f5' },
-            { label: 'Green (Low E/Pos)', data: data.green, backgroundColor: '#66bb6a' }
+            // UPDATED LABEL TEXT to reflect Valence terms
+            { label: 'Red (High Energy/Low Valence)', data: data.red, backgroundColor: '#ef5350' },
+            { label: 'Yellow (High Energy/High Valence)', data: data.yellow, backgroundColor: '#fdd835' },
+            { label: 'Blue (Low Energy/Low Valence)', data: data.blue, backgroundColor: '#42a5f5' },
+            { label: 'Green (Low Energy/High Valence)', data: data.green, backgroundColor: '#66bb6a' }
           ]
         },
         options: {
@@ -683,6 +684,13 @@ Format your entire response using Markdown in this structure:
         font-size: 0.75rem;
         margin-top: 0.5rem;
         color: #999; 
+    }
+    
+    .valence-note {
+        font-size: 0.8rem;
+        color: var(--brand-secondary);
+        font-style: italic;
+        margin-top: 0.5rem;
     }
 
     main {
@@ -1147,13 +1155,16 @@ Format your entire response using Markdown in this structure:
 <body>
   <header>
     <div class="brand-container">
-      <img src="https://appimize.app/assets/apps/user_1097/images/af5331a08cd5_576_1097.png" alt="App Logo" class="brand-logo">
+      <img src="https://appimize.app/assets/apps/user_1097/images/af5331a08cd5_576_1097.png" alt="Smart Emotion Tracker Logo" class="brand-logo">
       <h1>Smart Emotion Tracker</h1>
     </div>
     <p>Your Smart Companion for Emotional Wellness</p>
     <div class="user-info">
       User ID: <span id="userIdDisplay">Loading...</span>
     </div>
+    <p class="valence-note">
+        Terminology Note: Since all emotions are valuable signals, we use the scientific term "Valence" (how pleasant or unpleasant an emotion feels) instead of 'positive' or 'negative'.
+    </p>
   </header>
 
   <main>
@@ -1167,16 +1178,17 @@ Format your entire response using Markdown in this structure:
               1. Choose Quadrant 
               <span class="info-icon">?</span>
               <div class="tooltip-content">
-                **The Energy/Valence Map:** Select the zone that best describes your feeling: **Red** (High Energy, Negative, e.g., Anxious), **Yellow** (High Energy, Positive, e.g., Excited), **Blue** (Low Energy, Negative, e.g., Sad), or **Green** (Low Energy, Positive, e.g., Calm).
+                The Energy/Valence Map: Select the zone that best describes your feeling based on its Energy (High/Low Arousal) and Valence (High/Low Pleasantness).
               </div>
             </label>
           </div>
           <select id="quadrant" required>
             <option value="">-- Select Quadrant --</option>
-            <option value="red">Red (High Energy, Negative)</option>
-            <option value="yellow">Yellow (High Energy, Positive)</option>
-            <option value="blue">Blue (Low Energy, Negative)</option>
-            <option value="green">Green (Low Energy, Positive)</option>
+            <!-- UPDATED TEXT: Unpleasant -> Low Valence, Pleasant -> High Valence -->
+            <option value="red">Red (High Energy, Low Valence)</option>
+            <option value="yellow">Yellow (High Energy, High Valence)</option>
+            <option value="blue">Blue (Low Energy, Low Valence)</option>
+            <option value="green">Green (Low Energy, High Valence)</option>
           </select>
         </div>
         
@@ -1264,23 +1276,24 @@ Format your entire response using Markdown in this structure:
 
     <!-- 2. Mood Quadrant Chart (with user image) -->
     <section>
-      <h2>🧠 Mood Quadrant Chart</h2>
+      <h2> Emotion Quadrants: The Energy - Valence Map</h2>
       <div class="mood-image-container">
         <!-- Replaced placeholder with user's uploaded image path -->
-        <img src="https://cognitioplus.aiwaapp.live/cache/media_cache/d7f61d401424fdb850f47372842bbafa.png" alt="Mood Quadrant Chart" class="mood-image">
+        <img src="https://cognitioplus.aiwaapp.live/cache/media_cache/390557ed1a7dccd01221f77ad5095327.png" alt="Mood Quadrant Chart" class="mood-image">
       </div>
       <div class="quadrants">
-        <div class="quadrant red"><h3>Red Zone</h3><p>High Energy, Negative Emotion (e.g., Anger, Anxiety)</p></div>
-        <div class="quadrant yellow"><h3>Yellow Zone</h3><p>High Energy, Positive Emotion (e.g., Excitement, Focus)</p></div>
-        <div class="quadrant blue"><h3>Blue Zone</h3><p>Low Energy, Negative Emotion (e.g., Sadness, Boredom)</p></div>
-        <div class="quadrant green"><h3>Green Zone</h3><p>Low Energy, Positive Emotion (e.g., Calm, Content)</p></div>
+        <!-- UPDATED TEXT: Unpleasant -> Low Valence, Pleasant -> High Valence -->
+        <div class="quadrant red"><h3>Red Zone</h3><p>High Energy, Low Valence (e.g., Anger, Anxiety)</p></div>
+        <div class="quadrant yellow"><h3>Yellow Zone</h3><p>High Energy, High Valence (e.g., Excitement, Focus)</p></div>
+        <div class="quadrant blue"><h3>Blue Zone</h3><p>Low Energy, Low Valence (e.g., Sadness, Boredom)</p></div>
+        <div class="quadrant green"><h3>Green Zone</h3><p>Low Energy, High Valence (e.g., Calm, Content)</p></div>
       </div>
     </section>
 
     <!-- 3. AI Insights -->
     <section>
       <h2>💡 Personalized Insights</h2>
-      <p style="margin-bottom: 1rem; font-size: 0.95rem; color: #555;">Generate your analysis based on the **Hawkins Map of Consciousness**. Requires at least 5 logged entries.</p>
+      <p style="margin-bottom: 1rem; font-size: 0.95rem; color: #555;">Generate your analysis based on the Hawkins Map of Consciousness. Requires at least 5 logged entries.</p>
       <button id="generateInsightsBtn">Generate Insights & Recommendations</button>
       <div id="insightsOutput" style="margin-top: 1rem;">
         <p style="text-align:center; color:#888;">AI insights will appear here after logging a few entries.</p>

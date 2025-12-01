@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#b425aa"/>
+  <title>Smart Emotion Tracker</title>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  
+  <!-- Fonts: Montserrat, Poppins, Roboto Condensed -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Poppins:wght@600&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      /* Brand Colors */
+      --brand-primary: #b425aa;
+      --brand-secondary: #c80ec9;
+      --brand-gold: #D4AF37; /* Assumed #D4AF3 was intended as Gold */
+      
+      /* Quadrant Colors (Kept for functionality) */
+      --red-bg: #ffebee; --red-text: #c62828; --red-border: #ef5350;
+      --yellow-bg: #fffde7; --yellow-text: #f9a825; --yellow-border: #fdd835;
+      --blue-bg: #e3f2fd; --blue-text: #1565c0; --blue-border: #42a5f5;
+      --green-bg: #e8f5e9; --green-text: #2e7d32; --green-border: #66bb6a;
+      
+      --dark: #333; --light: #fdfbfd; --white: #fff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Roboto Condensed', sans-serif; /* Body Text */
+      background-color: var(--light);
+      color: var(--dark);
+      padding-bottom: 80px;
+    }
+
+    /* Brand Header */
+    header {
+      background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+      color: white;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(180, 37, 170, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 0.5rem;
+    }
+
+    .brand-logo {
+      width: 45px;
+      height: 45px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+
+    header h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 1.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 0;
+    }
+
+    header p {
+      color: var(--brand-gold);
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: 0.5px;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    /* Sections */
+    section {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      border-top: 4px solid var(--brand-primary);
+    }
+
+    h2 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--brand-primary);
+      border-bottom: 2px solid #eee;
+      padding-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Mood Image */
+    .mood-image-container {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .mood-image {
+      width: 100%;
+      max-width: 500px;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      border: 2px solid var(--brand-gold);
+    }
+
+    /* Quadrants Info */
+    .quadrants {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .quadrant {
+      padding: 1rem;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 1rem;
+      transition: transform 0.2s;
+    }
+    
+    .quadrant:hover { transform: translateY(-2px); }
+
+    .quadrant h3 { 
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 1.1rem; 
+      margin-bottom: 5px; 
+    }
+    
+    .red { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red-border); }
+    .yellow { background: var(--yellow-bg); color: var(--yellow-text); border: 1px solid var(--yellow-border); }
+    .blue { background: var(--blue-bg); color: var(--blue-text); border: 1px solid var(--blue-border); }
+    .green { background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green-border); }
+
+    /* Form */
+    form { display: grid; gap: 1.2rem; }
+    
+    label {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--brand-primary);
+      margin-bottom: 0.4rem;
+      display: block;
+    }
+
+    select, input, textarea {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #eee;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-family: 'Roboto Condensed', sans-serif;
+      background: #fafafa;
+      transition: border-color 0.3s;
+    }
+
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--brand-secondary);
+      background: #fff;
+    }
+
+    button[type="submit"] {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right, var(--brand-primary), var(--brand-secondary));
+      color: white;
+      border: none;
+      padding: 16px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 10px;
+      box-shadow: 0 4px 10px rgba(180, 37, 170, 0.3);
+    }
+
+    button[type="submit"]:hover { 
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(180, 37, 170, 0.4);
+    }
+
+    /* Range Input Customization */
+    input[type=range] {
+      accent-color: var(--brand-primary);
+    }
+
+    /* Logs */
+    .log-item {
+      background: #fff;
+      border-left: 8px solid #ccc;
+      padding: 1.2rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .log-item.red { border-left-color: var(--red-text); }
+    .log-item.yellow { border-left-color: var(--yellow-text); }
+    .log-item.blue { border-left-color: var(--blue-text); }
+    .log-item.green { border-left-color: var(--green-text); }
+
+    .log-content h4 { 
+      font-family: 'Poppins', sans-serif;
+      margin-bottom: 5px;
+      font-size: 1.1rem;
+    }
+    
+    .log-meta { 
+      font-size: 0.9rem; 
+      color: #666; 
+      margin-bottom: 5px;
+      font-weight: 400;
+    }
+    
+    .log-note { 
+      font-style: italic; 
+      color: #555; 
+      margin-top: 8px;
+      background: #f9f9f9;
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 1.5rem;
+      padding: 0 0 0 10px;
+      transition: color 0.2s;
+    }
+    .delete-btn:hover { color: #ff4444; }
+
+    /* Canvas Container */
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+    }
+
+    @media (max-width: 600px) {
+      .quadrants { grid-template-columns: 1fr; }
+      header h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand-container">
+      <img src="https://appimize.app/assets/apps/user_1097/images/af5331a08cd5_576_1097.png" alt="Logo" class="brand-logo">
+      <h1>Emotion Tracker</h1>
+    </div>
+    <p>VISUALIZE. REFLECT. GROW.</p>
+  </header>
+
+  <main>
+    <!-- Reference Guide -->
+    <section class="mood-grid">
+      <h2>🔍 Mood Meter Reference</h2>
+      
+      <div class="mood-image-container">
+        <img src="https://appimize.app/assets/apps/user_1097/images/c9b1415e6b64_994_1097.png" alt="Mood Meter Chart" class="mood-image">
+      </div>
+
+      <div class="quadrants">
+        <div class="quadrant red">
+          <h3>Red</h3>
+          <p>High Energy / Unpleasant</p>
+        </div>
+        <div class="quadrant yellow">
+          <h3>Yellow</h3>
+          <p>High Energy / Pleasant</p>
+        </div>
+        <div class="quadrant blue">
+          <h3>Blue</h3>
+          <p>Low Energy / Unpleasant</p>
+        </div>
+        <div class="quadrant green">
+          <h3>Green</h3>
+          <p>Low Energy / Pleasant</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Entry Form -->
+    <section class="journal-form">
+      <h2>📝 Log New Emotion</h2>
+      <form id="moodForm">
+        <div>
+          <label for="quadrant">1. Which zone are you in?</label>
+          <select id="quadrant" required>
+            <option value="">-- Select Quadrant --</option>
+            <option value="red">🔴 Red (High Energy / Unpleasant)</option>
+            <option value="yellow">🟡 Yellow (High Energy / Pleasant)</option>
+            <option value="blue">🔵 Blue (Low Energy / Unpleasant)</option>
+            <option value="green">🟢 Green (Low Energy / Pleasant)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="emotion">2. Specific Emotion</label>
+          <select id="emotion" disabled required>
+            <option value="">-- Select Quadrant First --</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="intensity">3. Intensity (1-10)</label>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="range" id="intensity" min="1" max="10" value="5" style="flex-grow:1;" oninput="this.nextElementSibling.value = this.value">
+            <output style="font-family: 'Poppins'; font-weight: bold; color: var(--brand-primary); font-size: 1.2rem; width: 30px; text-align: center;">5</output>
+          </div>
+        </div>
+
+        <div>
+          <label for="tag">4. Activity</label>
+          <select id="tag">
+            <option value="work">🧠 Work</option>
+            <option value="study">🏫 Study</option>
+            <option value="family">👨‍👩‍👧‍👦 Family</option>
+            <option value="social">💬 Socializing</option>
+            <option value="rest">🛋️ Resting</option>
+            <option value="exercise">🏃 Exercise</option>
+            <option value="commute">🚌 Commute</option>
+            <option value="media">📱 Social Media</option>
+            <option value="chores">🧹 Chores</option>
+            <option value="other">❓ Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="trigger">Trigger (Optional)</label>
+          <input type="text" id="trigger" placeholder="What caused this feeling?">
+        </div>
+
+        <div>
+          <label for="note">Reflection (Optional)</label>
+          <textarea id="note" rows="2" placeholder="Brief context..."></textarea>
+        </div>
+
+        <button type="submit">SAVE ENTRY</button>
+      </form>
+    </section>
+
+    <!-- Charts -->
+    <section class="mood-chart">
+      <h2>📊 Last 7 Days Overview</h2>
+      <div class="chart-container">
+        <canvas id="moodChart"></canvas>
+      </div>
+    </section>
+
+    <!-- History -->
+    <section class="journal-log">
+      <h2>📖 Recent History</h2>
+      <div id="logList">
+        <!-- Logs injected here -->
+        <p style="text-align:center; color:#888;">No logs yet. Add one above!</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // --- Data Configuration ---
+    // Expanded emotion lists to better reflect the comprehensive Mood Meter chart
+    const emotionMap = {
+      red: [
+        'Enraged', 'Panicked', 'Stressed', 'Jittery', 'Shocked', 'Restless', 
+        'Anxious', 'Apprehensive', 'Worried', 'Irritated', 'Annoyed', 
+        'Repulsed', 'Troubled', 'Concerned', 'Furious', 'Frightened'
+      ],
+      yellow: [
+        'Surprised', 'Upbeat', 'Festive', 'Exhilarated', 'Ecstatic', 'Hyper', 
+        'Cheerful', 'Motivated', 'Inspired', 'Elated', 'Energized', 'Lively', 
+        'Enthusiastic', 'Optimistic', 'Excited', 'Happy', 'Proud', 'Thrilled', 
+        'Joyful', 'Hopeful', 'Playful', 'Blissful'
+      ],
+      blue: [
+        'Disgusted', 'Glum', 'Disappointed', 'Down', 'Apathetic', 'Pessimistic', 
+        'Morose', 'Discouraged', 'Sad', 'Bored', 'Alienated', 'Miserable', 
+        'Lonely', 'Disheartened', 'Tired', 'Despondent', 'Depressed', 'Sullen', 
+        'Exhausted', 'Fatigued', 'Despair', 'Hopeless', 'Drained'
+      ],
+      green: [
+        'At Ease', 'Easygoing', 'Content', 'Loving', 'Fulfilled', 'Calm', 
+        'Secure', 'Satisfied', 'Grateful', 'Touching', 'Relaxed', 'Chill', 
+        'Restful', 'Balanced', 'Mellow', 'Thoughtful', 'Peaceful', 'Comfortable', 
+        'Carefree', 'Serene', 'Tranquil', 'Blessed'
+      ]
+    };
+
+    // --- DOM Elements ---
+    const quadrantSelect = document.getElementById('quadrant');
+    const emotionSelect = document.getElementById('emotion');
+    const form = document.getElementById('moodForm');
+    const logList = document.getElementById('logList');
+    const ctx = document.getElementById('moodChart').getContext('2d');
+    let moodChart;
+
+    // --- Event Listeners ---
+    
+    // 1. Update Emotion Dropdown based on Quadrant
+    quadrantSelect.addEventListener('change', (e) => {
+      const selectedQuad = e.target.value;
+      emotionSelect.innerHTML = '<option value="">-- Select Emotion --</option>';
+      
+      if (selectedQuad && emotionMap[selectedQuad]) {
+        emotionSelect.disabled = false;
+        // Sort emotions alphabetically for easier finding
+        const sortedEmotions = [...emotionMap[selectedQuad]].sort();
+        
+        sortedEmotions.forEach(emo => {
+          const opt = document.createElement('option');
+          opt.value = emo;
+          opt.textContent = emo;
+          emotionSelect.appendChild(opt);
+        });
+      } else {
+        emotionSelect.disabled = true;
+      }
+    });
+
+    // 2. Handle Form Submit
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const entry = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        quadrant: quadrantSelect.value,
+        emotion: emotionSelect.value,
+        intensity: document.getElementById('intensity').value,
+        tag: document.getElementById('tag').value,
+        trigger: document.getElementById('trigger').value || 'N/A',
+        note: document.getElementById('note').value || ''
+      };
+
+      saveEntry(entry);
+      form.reset();
+      document.querySelector('output').textContent = "5"; // Reset range output
+      emotionSelect.disabled = true;
+      emotionSelect.innerHTML = '<option value="">-- Select Quadrant First --</option>';
+      
+      loadLogs();
+      updateChart();
+    });
+
+    // --- Functions ---
+
+    function getEntries() {
+      return JSON.parse(localStorage.getItem('moodEntries')) || [];
+    }
+
+    function saveEntry(entry) {
+      const entries = getEntries();
+      entries.unshift(entry); // Add to top
+      localStorage.setItem('moodEntries', JSON.stringify(entries));
+    }
+
+    function deleteEntry(id) {
+      if(confirm('Delete this entry?')) {
+        let entries = getEntries();
+        entries = entries.filter(e => e.id !== id);
+        localStorage.setItem('moodEntries', JSON.stringify(entries));
+        loadLogs();
+        updateChart();
+      }
+    }
+
+    function formatDate(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function loadLogs() {
+      const entries = getEntries();
+      logList.innerHTML = '';
+
+      if (entries.length === 0) {
+        logList.innerHTML = '<p style="text-align:center; color:#888;">No logs yet. Start tracking!</p>';
+        return;
+      }
+
+      entries.forEach(entry => {
+        const div = document.createElement('div');
+        div.className = `log-item ${entry.quadrant}`;
+        div.innerHTML = `
+          <div class="log-content">
+            <h4>${entry.emotion} <small>(${entry.intensity}/10)</small></h4>
+            <div class="log-meta">
+              <span>📅 ${formatDate(entry.timestamp)}</span> | 
+              <span>🏷️ ${entry.tag}</span>
+            </div>
+            ${entry.trigger !== 'N/A' ? `<div class="log-meta">⚡ Trigger: ${entry.trigger}</div>` : ''}
+            ${entry.note ? `<p class="log-note">"${entry.note}"</p>` : ''}
+          </div>
+          <button class="delete-btn" onclick="deleteEntry(${entry.id})">&times;</button>
+        `;
+        logList.appendChild(div);
+      });
+    }
+
+    // --- Chart Logic ---
+    function updateChart() {
+      const entries = getEntries();
+      
+      // Get last 7 days keys
+      const days = [];
+      for(let i=6; i>=0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        days.push(d.toLocaleDateString());
+      }
+
+      // Initialize counts
+      const data = {
+        red: new Array(7).fill(0),
+        yellow: new Array(7).fill(0),
+        blue: new Array(7).fill(0),
+        green: new Array(7).fill(0)
+      };
+
+      // Aggregate data
+      entries.forEach(e => {
+        const eDate = new Date(e.timestamp).toLocaleDateString();
+        const index = days.indexOf(eDate);
+        if (index !== -1) {
+          data[e.quadrant][index]++;
+        }
+      });
+
+      if (moodChart) moodChart.destroy();
+
+      moodChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: days,
+          datasets: [
+            { label: 'Red (High E/Neg)', data: data.red, backgroundColor: '#ef5350' },
+            { label: 'Yellow (High E/Pos)', data: data.yellow, backgroundColor: '#fdd835' },
+            { label: 'Blue (Low E/Neg)', data: data.blue, backgroundColor: '#42a5f5' },
+            { label: 'Green (Low E/Pos)', data: data.green, backgroundColor: '#66bb6a' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true },
+            y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } }
+          },
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+
+    // --- Initialization ---
+    // Make deleteEntry globally accessible
+    window.deleteEntry = deleteEntry;
+    
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => console.log('SW Registered'))
+          .catch(err => console.log('SW Fail', err));
+      });
+    }
+
+    // Initial Load
+    loadLogs();
+    updateChart();
+
+  </script>
+</body>
+</html>

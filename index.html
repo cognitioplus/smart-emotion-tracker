@@ -3,520 +3,428 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="theme-color" content="#b425aa"/>
+  <meta name="theme-color" content="#ffffff"/> <!-- Updated theme color for browser chrome -->
   <title>Smart Emotion Tracker</title>
   
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="manifest.json" />
+  <!-- PWA Manifest --><link rel="manifest" href="manifest.json" />
   
-  <!-- Fonts: Montserrat, Poppins, Roboto Condensed -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <!-- Fonts: Montserrat, Poppins, Roboto Condensed --><link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Poppins:wght@600&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
   
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chart.js --><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    :root {
-      /* Brand Colors */
-      --brand-primary: #b425aa;
-      --brand-secondary: #c80ec9;
-      --brand-gold: #D4AF37; /* Assumed #D4AF3 was intended as Gold */
-      
-      /* Quadrant Colors (Kept for functionality) */
-      --red-bg: #ffebee; --red-text: #c62828; --red-border: #ef5350;
-      --yellow-bg: #fffde7; --yellow-text: #f9a825; --yellow-border: #fdd835;
-      --blue-bg: #e3f2fd; --blue-text: #1565c0; --blue-border: #42a5f5;
-      --green-bg: #e8f5e9; --green-text: #2e7d32; --green-border: #66bb6a;
-      
-      --dark: #333; --light: #fdfbfd; --white: #fff;
-    }
+  <!-- Firebase Imports (Module) --><script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, addDoc, deleteDoc, onSnapshot, collection, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    // --- Global Firebase/App Setup ---
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-    body {
-      font-family: 'Roboto Condensed', sans-serif; /* Body Text */
-      background-color: var(--light);
-      color: var(--dark);
-      padding-bottom: 80px;
-    }
+    let app;
+    let db;
+    let auth;
+    let userId = null;
+    let isAuthReady = false;
+    window.moodEntries = []; // Make global for easy chart/log access
 
-    /* Brand Header */
-    header {
-      background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
-      color: white;
-      padding: 1.5rem 1rem;
-      text-align: center;
-      box-shadow: 0 4px 15px rgba(180, 37, 170, 0.3);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
+    // --- LLM API Configuration ---
+    const GEMINI_API_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent';
+    const apiKey = ""; // Canvas will provide this if it's empty
 
-    .brand-container {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 0.5rem;
-    }
-
-    .brand-logo {
-      width: 45px;
-      height: 45px;
-      object-fit: contain;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-    }
-
-    header h1 {
-      font-family: 'Montserrat', sans-serif;
-      font-weight: 700;
-      font-size: 1.8rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin: 0;
-    }
-
-    header p {
-      color: var(--brand-gold);
-      font-family: 'Poppins', sans-serif;
-      font-weight: 600;
-      font-size: 0.9rem;
-      letter-spacing: 0.5px;
-    }
-
-    main {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 1.5rem;
-    }
-
-    /* Sections */
-    section {
-      background: var(--white);
-      border-radius: 16px;
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-      border-top: 4px solid var(--brand-primary);
-    }
-
-    h2 {
-      font-family: 'Montserrat', sans-serif;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: var(--brand-primary);
-      border-bottom: 2px solid #eee;
-      padding-bottom: 0.5rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    /* Mood Image */
-    .mood-image-container {
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-    
-    .mood-image {
-      width: 100%;
-      max-width: 500px;
-      border-radius: 12px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-      border: 2px solid var(--brand-gold);
-    }
-
-    /* Quadrants Info */
-    .quadrants {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .quadrant {
-      padding: 1rem;
-      border-radius: 12px;
-      text-align: center;
-      font-size: 1rem;
-      transition: transform 0.2s;
-    }
-    
-    .quadrant:hover { transform: translateY(-2px); }
-
-    .quadrant h3 { 
-      font-family: 'Poppins', sans-serif;
-      font-weight: 600;
-      font-size: 1.1rem; 
-      margin-bottom: 5px; 
-    }
-    
-    .red { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red-border); }
-    .yellow { background: var(--yellow-bg); color: var(--yellow-text); border: 1px solid var(--yellow-border); }
-    .blue { background: var(--blue-bg); color: var(--blue-text); border: 1px solid var(--blue-border); }
-    .green { background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green-border); }
-
-    /* Form */
-    form { display: grid; gap: 1.2rem; }
-    
-    label {
-      font-family: 'Poppins', sans-serif;
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: var(--brand-primary);
-      margin-bottom: 0.4rem;
-      display: block;
-    }
-
-    select, input, textarea {
-      width: 100%;
-      padding: 14px;
-      border: 2px solid #eee;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-family: 'Roboto Condensed', sans-serif;
-      background: #fafafa;
-      transition: border-color 0.3s;
-    }
-
-    select:focus, input:focus, textarea:focus {
-      outline: none;
-      border-color: var(--brand-secondary);
-      background: #fff;
-    }
-
-    button[type="submit"] {
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(to right, var(--brand-primary), var(--brand-secondary));
-      color: white;
-      border: none;
-      padding: 16px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.3s;
-      margin-top: 10px;
-      box-shadow: 0 4px 10px rgba(180, 37, 170, 0.3);
-    }
-
-    button[type="submit"]:hover { 
-      transform: translateY(-2px);
-      box-shadow: 0 6px 15px rgba(180, 37, 170, 0.4);
-    }
-
-    /* Range Input Customization */
-    input[type=range] {
-      accent-color: var(--brand-primary);
-    }
-
-    /* Logs */
-    .log-item {
-      background: #fff;
-      border-left: 8px solid #ccc;
-      padding: 1.2rem;
-      margin-bottom: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .log-item.red { border-left-color: var(--red-text); }
-    .log-item.yellow { border-left-color: var(--yellow-text); }
-    .log-item.blue { border-left-color: var(--blue-text); }
-    .log-item.green { border-left-color: var(--green-text); }
-
-    .log-content h4 { 
-      font-family: 'Poppins', sans-serif;
-      margin-bottom: 5px;
-      font-size: 1.1rem;
-    }
-    
-    .log-meta { 
-      font-size: 0.9rem; 
-      color: #666; 
-      margin-bottom: 5px;
-      font-weight: 400;
-    }
-    
-    .log-note { 
-      font-style: italic; 
-      color: #555; 
-      margin-top: 8px;
-      background: #f9f9f9;
-      padding: 8px;
-      border-radius: 6px;
-    }
-
-    .delete-btn {
-      background: none;
-      border: none;
-      color: #ccc;
-      cursor: pointer;
-      font-size: 1.5rem;
-      padding: 0 0 0 10px;
-      transition: color 0.2s;
-    }
-    .delete-btn:hover { color: #ff4444; }
-
-    /* Canvas Container */
-    .chart-container {
-      position: relative;
-      height: 300px;
-      width: 100%;
-    }
-
-    @media (max-width: 600px) {
-      .quadrants { grid-template-columns: 1fr; }
-      header h1 { font-size: 1.5rem; }
-    }
-  </style>
-</head>
-<body>
-
-  <header>
-    <div class="brand-container">
-      <img src="https://appimize.app/assets/apps/user_1097/images/af5331a08cd5_576_1097.png" alt="Logo" class="brand-logo">
-      <h1>Emotion Tracker</h1>
-    </div>
-    <p>VISUALIZE. REFLECT. GROW.</p>
-  </header>
-
-  <main>
-    <!-- Reference Guide -->
-    <section class="mood-grid">
-      <h2>🔍 Mood Meter Reference</h2>
-      
-      <div class="mood-image-container">
-        <img src="https://appimize.app/assets/apps/user_1097/images/c9b1415e6b64_994_1097.png" alt="Mood Meter Chart" class="mood-image">
-      </div>
-
-      <div class="quadrants">
-        <div class="quadrant red">
-          <h3>Red</h3>
-          <p>High Energy / Unpleasant</p>
-        </div>
-        <div class="quadrant yellow">
-          <h3>Yellow</h3>
-          <p>High Energy / Pleasant</p>
-        </div>
-        <div class="quadrant blue">
-          <h3>Blue</h3>
-          <p>Low Energy / Unpleasant</p>
-        </div>
-        <div class="quadrant green">
-          <h3>Green</h3>
-          <p>Low Energy / Pleasant</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Entry Form -->
-    <section class="journal-form">
-      <h2>📝 Log New Emotion</h2>
-      <form id="moodForm">
-        <div>
-          <label for="quadrant">1. Which zone are you in?</label>
-          <select id="quadrant" required>
-            <option value="">-- Select Quadrant --</option>
-            <option value="red">🔴 Red (High Energy / Unpleasant)</option>
-            <option value="yellow">🟡 Yellow (High Energy / Pleasant)</option>
-            <option value="blue">🔵 Blue (Low Energy / Unpleasant)</option>
-            <option value="green">🟢 Green (Low Energy / Pleasant)</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="emotion">2. Specific Emotion</label>
-          <select id="emotion" disabled required>
-            <option value="">-- Select Quadrant First --</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="intensity">3. Intensity (1-10)</label>
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <input type="range" id="intensity" min="1" max="10" value="5" style="flex-grow:1;" oninput="this.nextElementSibling.value = this.value">
-            <output style="font-family: 'Poppins'; font-weight: bold; color: var(--brand-primary); font-size: 1.2rem; width: 30px; text-align: center;">5</output>
-          </div>
-        </div>
-
-        <div>
-          <label for="tag">4. Activity</label>
-          <select id="tag">
-            <option value="work">🧠 Work</option>
-            <option value="study">🏫 Study</option>
-            <option value="family">👨‍👩‍👧‍👦 Family</option>
-            <option value="social">💬 Socializing</option>
-            <option value="rest">🛋️ Resting</option>
-            <option value="exercise">🏃 Exercise</option>
-            <option value="commute">🚌 Commute</option>
-            <option value="media">📱 Social Media</option>
-            <option value="chores">🧹 Chores</option>
-            <option value="other">❓ Other</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="trigger">Trigger (Optional)</label>
-          <input type="text" id="trigger" placeholder="What caused this feeling?">
-        </div>
-
-        <div>
-          <label for="note">Reflection (Optional)</label>
-          <textarea id="note" rows="2" placeholder="Brief context..."></textarea>
-        </div>
-
-        <button type="submit">SAVE ENTRY</button>
-      </form>
-    </section>
-
-    <!-- Charts -->
-    <section class="mood-chart">
-      <h2>📊 Last 7 Days Overview</h2>
-      <div class="chart-container">
-        <canvas id="moodChart"></canvas>
-      </div>
-    </section>
-
-    <!-- History -->
-    <section class="journal-log">
-      <h2>📖 Recent History</h2>
-      <div id="logList">
-        <!-- Logs injected here -->
-        <p style="text-align:center; color:#888;">No logs yet. Add one above!</p>
-      </div>
-    </section>
-  </main>
-
-  <script>
-    // --- Data Configuration ---
-    // Expanded emotion lists to better reflect the comprehensive Mood Meter chart
-    const emotionMap = {
-      red: [
-        'Enraged', 'Panicked', 'Stressed', 'Jittery', 'Shocked', 'Restless', 
-        'Anxious', 'Apprehensive', 'Worried', 'Irritated', 'Annoyed', 
-        'Repulsed', 'Troubled', 'Concerned', 'Furious', 'Frightened'
-      ],
-      yellow: [
-        'Surprised', 'Upbeat', 'Festive', 'Exhilarated', 'Ecstatic', 'Hyper', 
-        'Cheerful', 'Motivated', 'Inspired', 'Elated', 'Energized', 'Lively', 
-        'Enthusiastic', 'Optimistic', 'Excited', 'Happy', 'Proud', 'Thrilled', 
-        'Joyful', 'Hopeful', 'Playful', 'Blissful'
-      ],
-      blue: [
-        'Disgusted', 'Glum', 'Disappointed', 'Down', 'Apathetic', 'Pessimistic', 
-        'Morose', 'Discouraged', 'Sad', 'Bored', 'Alienated', 'Miserable', 
-        'Lonely', 'Disheartened', 'Tired', 'Despondent', 'Depressed', 'Sullen', 
-        'Exhausted', 'Fatigued', 'Despair', 'Hopeless', 'Drained'
-      ],
-      green: [
-        'At Ease', 'Easygoing', 'Content', 'Loving', 'Fulfilled', 'Calm', 
-        'Secure', 'Satisfied', 'Grateful', 'Touching', 'Relaxed', 'Chill', 
-        'Restful', 'Balanced', 'Mellow', 'Thoughtful', 'Peaceful', 'Comfortable', 
-        'Carefree', 'Serene', 'Tranquil', 'Blessed'
-      ]
+    // --- External Resources Links (Mandatory) ---
+    window.links = {
+        habit: 'https://cognitioplus.aiwaapp.live/habit-design-studio',
+        wellbe: 'https://cognitioplus.aiwaapp.live/well-be',
+        resilience: 'https://cognitioplus.aiwaapp.live/resilience-navigator',
+        counseling: 'https://cognitioplus.aiwaapp.live/online-counseling',
+        growth: 'https://growth.cognitio-plus.com'
     };
 
-    // --- DOM Elements ---
-    const quadrantSelect = document.getElementById('quadrant');
-    const emotionSelect = document.getElementById('emotion');
-    const form = document.getElementById('moodForm');
-    const logList = document.getElementById('logList');
-    const ctx = document.getElementById('moodChart').getContext('2d');
-    let moodChart;
 
-    // --- Event Listeners ---
+    // --- Data Configuration (Re-added) ---
+    const emotionMap = {
+      red: ['Angry', 'Frustrated', 'Anxious', 'Irritated', 'Stressed', 'Worried', 'Fearful'],
+      yellow: ['Excited', 'Happy', 'Focused', 'Wowed', 'Determined', 'Joyful', 'Optimistic'],
+      blue: ['Tired', 'Sad', 'Bored', 'Lonely', 'Disappointed', 'Grieving', 'Hopeless'],
+      green: ['Calm', 'Relaxed', 'Content', 'Thankful', 'Peaceful', 'Curious', 'Mellow']
+    };
     
-    // 1. Update Emotion Dropdown based on Quadrant
-    quadrantSelect.addEventListener('change', (e) => {
-      const selectedQuad = e.target.value;
-      emotionSelect.innerHTML = '<option value="">-- Select Emotion --</option>';
-      
-      if (selectedQuad && emotionMap[selectedQuad]) {
-        emotionSelect.disabled = false;
-        // Sort emotions alphabetically for easier finding
-        const sortedEmotions = [...emotionMap[selectedQuad]].sort();
+    // --- DOM Elements (Deferred assignment) ---
+    let quadrantSelect;
+    let emotionSelect;
+    let form;
+    let logList;
+    let ctx;
+    let moodChart;
+    let reminderTimeInput;
+
+
+    // --- CUSTOM MODAL/ALERT FUNCTIONS (Replaces browser alert/confirm) ---
+
+    // Get modal DOM elements (These are defined in the body later, but accessed here)
+    let customModal;
+    let modalMessage;
+    let modalConfirmBtn;
+    let modalCancelBtn;
+    
+    function initModalElements() {
+        customModal = document.getElementById('customModal');
+        modalMessage = document.getElementById('modalMessage');
+        modalConfirmBtn = document.getElementById('modalConfirm');
+        modalCancelBtn = document.getElementById('modalCancel');
+    }
+
+    function showCustomAlert(message) {
+        if (!customModal) initModalElements();
+        modalMessage.innerHTML = `<p>${message}</p>`;
+        modalConfirmBtn.textContent = 'OK';
+        modalCancelBtn.style.display = 'none';
         
-        sortedEmotions.forEach(emo => {
-          const opt = document.createElement('option');
-          opt.value = emo;
-          opt.textContent = emo;
-          emotionSelect.appendChild(opt);
+        const closeModal = () => {
+            customModal.style.display = 'none';
+            modalConfirmBtn.removeEventListener('click', closeModal);
+        };
+        
+        modalConfirmBtn.addEventListener('click', closeModal);
+        customModal.style.display = 'flex';
+    }
+
+    function showCustomConfirm(message, onConfirm) {
+        if (!customModal) initModalElements();
+        modalMessage.innerHTML = `<p>${message}</p>`;
+        modalConfirmBtn.textContent = 'Yes, Delete';
+        modalCancelBtn.style.display = 'inline-block';
+        
+        const cleanup = () => {
+            customModal.style.display = 'none';
+            modalConfirmBtn.removeEventListener('click', handleConfirm);
+            modalCancelBtn.removeEventListener('click', handleCancel);
+        };
+
+        const handleConfirm = () => {
+            onConfirm();
+            cleanup();
+        };
+
+        const handleCancel = () => {
+            cleanup();
+        };
+
+        modalConfirmBtn.addEventListener('click', handleConfirm);
+        modalCancelBtn.addEventListener('click', handleCancel);
+        customModal.style.display = 'flex';
+    }
+
+
+    // --- LLM API CALL WITH BACKOFF ---
+
+    async function geminiApiCall(payload, maxRetries = 5) {
+        const apiUrl = `${GEMINI_API_URL_BASE}?key=${apiKey}`;
+        
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    return await response.json();
+                } else if (response.status === 429 && attempt < maxRetries - 1) {
+                    const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    continue; // Retry
+                } else {
+                    throw new Error(`API error: ${response.statusText}`);
+                }
+            } catch (error) {
+                if (attempt === maxRetries - 1) throw error;
+            }
+        }
+        throw new Error("API call failed after maximum retries.");
+    }
+
+    // --- GENERATE INSIGHTS FUNCTION ---
+    async function generateInsights() {
+        const outputDiv = document.getElementById('insightsOutput');
+        const generateBtn = document.getElementById('generateInsightsBtn');
+        const entries = window.moodEntries;
+
+        if (entries.length < 5) {
+            outputDiv.innerHTML = '<p style="color:var(--red-text); text-align:center;">Please log at least 5 entries to generate meaningful insights.</p>';
+            return;
+        }
+
+        // Show loading state
+        outputDiv.innerHTML = '<div class="loading-spinner"></div><p style="text-align:center; color: var(--brand-primary); font-style:italic;">Analyzing data and generating personalized insights...</p>';
+        generateBtn.disabled = true;
+
+        // 1. Prepare data for the LLM (Summarize the last 30 logs)
+        const recentEntries = entries.slice(0, 30);
+        const dataSummary = recentEntries.map(e => 
+            `[${new Date(e.timestamp).toLocaleDateString()}] ${e.emotion} (${e.intensity}/10) in ${e.quadrant} zone. Activity: ${e.tag}. Trigger: ${e.trigger}.`
+        ).join('\n');
+
+        // --- UPDATED SYSTEM PROMPT to incorporate Hawkins' Model ---
+        const systemPrompt = `You are a compassionate and professional AI Mental Wellness Coach. You use the principles of the Hawkins Map of Consciousness (emotional calibration, hidden needs, and resilient shifts) to guide the user. Your task is to analyze the user's mood logs and provide a three-part response:
+
+1. **Analysis & Hidden Need:** Summarize key negative patterns, identifying the most frequent negative emotion (e.g., Grief, Fear, Shame, Desire, Pride) and stating its **Hidden Need** based on the Map of Consciousness (e.g., Shame is love's cry for acceptance, Grief longs for comfort/healing).
+2. **Resilient Shift (Actionable Recommendations):** Provide 2-3 specific, actionable recommendations framed as a **Resilient Shift** towards a higher frequency state (e.g., moving Grief toward Compassionate Meaning-Making). Focus on simple, mindful actions.
+3. **External Resources:** Recommend specific external resources based on the user's needs. Use markdown links for the following resources EXACTLY as provided, without adding extra text around the links themselves:
+   - For mood regulation or skill building: Habit Design Studio (${window.links.habit}) or Resilience Navigator (${window.links.resilience}).
+   - For physical/mindfulness health: Well-Be (${window.links.wellbe}).
+   - If the analysis suggests frequent, high-intensity negative moods or signs of burnout (especially chronic Red/Blue zone entries): recommend accessing online counseling (${window.links.counseling}) or joining GROWTH Tribe (${window.links.growth}).
+   
+Format your entire response using Markdown in this structure:
+
+### Summary Analysis & Hidden Need
+[Your analysis, explicitly mentioning the most frequent low-frequency emotion and its hidden need.]
+
+### Resilient Shifts for Growth
+[Recommendation 1: Focused on addressing the hidden need.]
+[Recommendation 2: Focused on a mindful action/skill.]
+
+### Next Steps & Resources
+[Relevant resource link 1]
+[Relevant resource link 2]
+[Relevant resource link 3 - if applicable based on severity]
+`;
+
+        const userQuery = `Analyze the following mood log data and provide insights and resources based on the Map of Consciousness. The data is structured as: [Date] [Emotion] (Intensity/10) in [Quadrant] zone. Activity: [Tag]. Trigger: [Trigger].\n\n--- DATA ---\n${dataSummary}`;
+
+        const payload = {
+            contents: [{ parts: [{ text: userQuery }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
+            // Using search grounding to ensure the recommendations are based on best practices
+            tools: [{ "google_search": {} }] 
+        };
+        
+        try {
+            const result = await geminiApiCall(payload);
+            const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate insights at this time. The API returned an empty response.";
+            
+            // Format the result for display (Gemini returns raw Markdown)
+            outputDiv.innerHTML = `<div class="ai-result-box markdown-body">${text}</div>`;
+            
+        } catch (error) {
+            console.error("Gemini API call failed:", error);
+            showCustomAlert("Error generating insights. Please check the console for details or try again later.");
+            outputDiv.innerHTML = '<p style="color:var(--red-text); text-align:center;">Error generating insights. Please try again later.</p>';
+        } finally {
+            generateBtn.disabled = false;
+        }
+    }
+
+
+    // --- FIREBASE FUNCTIONS ---
+
+    async function initializeFirebase() {
+        if (Object.keys(firebaseConfig).length === 0) {
+            console.error("Firebase config is missing.");
+            isAuthReady = true;
+            loadLogs([]);
+            updateChart([]);
+            return;
+        }
+
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            setLogLevel('debug');
+
+            // 1. Initial Authentication Flow
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    isAuthReady = true;
+                    console.log("Firebase Auth Ready. User ID:", userId);
+                    const userIdDisplay = document.getElementById('userIdDisplay');
+                    if (userIdDisplay) userIdDisplay.textContent = userId;
+                    subscribeToLogs(); // Start listening for data
+                } else {
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch(e) {
+                        console.error("Initial sign-in failed:", e);
+                        isAuthReady = true;
+                        loadLogs([]);
+                        updateChart([]);
+                    }
+                }
+            });
+
+        } catch (error) {
+            console.error("Firebase initialization failed:", error);
+        }
+    }
+
+    // 2. Real-time Data Subscription
+    function subscribeToLogs() {
+        if (!isAuthReady || !userId || !db) return;
+
+        const path = `artifacts/${appId}/users/${userId}/moodEntries`;
+        const q = query(collection(db, path));
+        
+        onSnapshot(q, (snapshot) => {
+            window.moodEntries = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    timestamp: data.timestamp && typeof data.timestamp.toDate === 'function' 
+                               ? data.timestamp.toDate().toISOString() 
+                               : new Date().toISOString()
+                };
+            }).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            console.log(`Fetched ${window.moodEntries.length} mood entries.`);
+            loadLogs(window.moodEntries);
+            updateChart(window.moodEntries);
+        }, (error) => {
+            console.error("Error subscribing to Firestore:", error);
+            showCustomAlert(`Error connecting to mood data: ${error.message}`);
         });
-      } else {
-        emotionSelect.disabled = true;
-      }
-    });
-
-    // 2. Handle Form Submit
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      const entry = {
-        id: Date.now(),
-        timestamp: new Date().toISOString(),
-        quadrant: quadrantSelect.value,
-        emotion: emotionSelect.value,
-        intensity: document.getElementById('intensity').value,
-        tag: document.getElementById('tag').value,
-        trigger: document.getElementById('trigger').value || 'N/A',
-        note: document.getElementById('note').value || ''
-      };
-
-      saveEntry(entry);
-      form.reset();
-      document.querySelector('output').textContent = "5"; // Reset range output
-      emotionSelect.disabled = true;
-      emotionSelect.innerHTML = '<option value="">-- Select Quadrant First --</option>';
-      
-      loadLogs();
-      updateChart();
-    });
-
-    // --- Functions ---
-
-    function getEntries() {
-      return JSON.parse(localStorage.getItem('moodEntries')) || [];
     }
 
-    function saveEntry(entry) {
-      const entries = getEntries();
-      entries.unshift(entry); // Add to top
-      localStorage.setItem('moodEntries', JSON.stringify(entries));
+    // 3. Save Entry Function (Add Document)
+    async function saveEntry(entry) {
+        if (!isAuthReady || !userId || !db) {
+             console.error("Cannot save: Authentication or initialization not complete.");
+             showCustomAlert("Cannot save entry. Authentication is not complete.");
+             return;
+        }
+        try {
+            const path = `artifacts/${appId}/users/${userId}/moodEntries`;
+            await addDoc(collection(db, path), {
+                ...entry,
+                timestamp: new Date()
+            });
+            console.log("Entry saved to Firestore.");
+        } catch (error) {
+            console.error("Error adding document: ", error);
+            showCustomAlert("Error saving entry. Check console for details.");
+        }
     }
 
-    function deleteEntry(id) {
-      if(confirm('Delete this entry?')) {
-        let entries = getEntries();
-        entries = entries.filter(e => e.id !== id);
-        localStorage.setItem('moodEntries', JSON.stringify(entries));
-        loadLogs();
-        updateChart();
-      }
+    // 4. Delete Entry Function (Delete Document)
+    async function deleteEntry(docId) {
+        const performDelete = async () => {
+            if (!isAuthReady || !userId || !db) {
+                console.error("Cannot delete: Authentication or initialization not complete.");
+                showCustomAlert("Cannot delete entry. Authentication is not complete.");
+                return;
+            }
+            try {
+                const path = `artifacts/${appId}/users/${userId}/moodEntries`;
+                const docRef = doc(db, path, docId);
+                await deleteDoc(docRef);
+                console.log("Entry deleted from Firestore.");
+            } catch (error) {
+                console.error("Error deleting document: ", error);
+                showCustomAlert("Error deleting entry. Check console for details.");
+            }
+        };
+
+        showCustomConfirm('Are you sure you want to permanently delete this mood entry?', performDelete);
     }
 
+    // --- NOTIFICATION & REMINDER FUNCTIONS ---
+
+    // 1. Request Notification Permission
+    function requestNotificationPermission() {
+        if (!('Notification' in window)) {
+            console.warn("Notifications not supported in this browser.");
+            return;
+        }
+        if (Notification.permission === 'granted') {
+            return; // Already granted
+        }
+        
+        // Politely request permission
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                showCustomAlert("Notification permission granted! You can now set a daily reminder.");
+            } else {
+                console.warn("Notification permission denied.");
+            }
+        });
+    }
+    
+    // 2. Schedule Daily Reminder
+    async function scheduleDailyReminder(time) {
+        if (Notification.permission !== 'granted') {
+            showCustomAlert("Please grant notification permission first to set a reminder.");
+            return;
+        }
+
+        if (!('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
+            showCustomAlert("Service Worker not active. Cannot schedule reminder.");
+            return;
+        }
+
+        try {
+            // Store the chosen time in localStorage
+            localStorage.setItem('dailyReminderTime', time);
+            
+            // Attempt to register a Periodic Background Sync
+            const registration = await navigator.serviceWorker.ready;
+            
+            // Send a message to the service worker to update its internal schedule/state
+            navigator.serviceWorker.controller.postMessage({
+                type: 'SET_REMINDER',
+                time: time
+            });
+
+            // Note: Periodic Background Sync is unreliable for exact daily timing.
+            // We use a simplified message/localStorage approach for demonstration.
+
+            showCustomAlert(`Daily reminder set for ${time}! The Service Worker will attempt to notify you around that time.`);
+
+        } catch (error) {
+            console.error("Error scheduling reminder:", error);
+            showCustomAlert("Could not set reminder. See console for details.");
+        }
+    }
+    
+    // 3. Load Saved Reminder Time
+    function loadReminderTime() {
+        const savedTime = localStorage.getItem('dailyReminderTime');
+        if (reminderTimeInput && savedTime) {
+            reminderTimeInput.value = savedTime;
+        }
+    }
+
+
+    // --- UI/LOCAL FUNCTIONS ---
+    
     function formatDate(isoString) {
       const date = new Date(isoString);
       return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    function loadLogs() {
-      const entries = getEntries();
+    function loadLogs(entries) {
+      if (!logList) return; // Guard clause for logs
+      
       logList.innerHTML = '';
 
       if (entries.length === 0) {
-        logList.innerHTML = '<p style="text-align:center; color:#888;">No logs yet. Start tracking!</p>';
+        logList.innerHTML = '<p style="text-align:center; color:#888;">No logs yet. Start tracking! (Data is now synced via Firestore)</p>';
         return;
       }
 
       entries.forEach(entry => {
         const div = document.createElement('div');
+        const entryId = entry.id; 
         div.className = `log-item ${entry.quadrant}`;
         div.innerHTML = `
           <div class="log-content">
@@ -525,20 +433,22 @@
               <span>📅 ${formatDate(entry.timestamp)}</span> | 
               <span>🏷️ ${entry.tag}</span>
             </div>
-            ${entry.trigger !== 'N/A' ? `<div class="log-meta">⚡ Trigger: ${entry.trigger}</div>` : ''}
+            ${entry.trigger && entry.trigger !== 'N/A' ? `<div class="log-meta">⚡ Trigger: ${entry.trigger}</div>` : ''}
             ${entry.note ? `<p class="log-note">"${entry.note}"</p>` : ''}
           </div>
-          <button class="delete-btn" onclick="deleteEntry(${entry.id})">&times;</button>
+          <button class="delete-btn" onclick="window.deleteEntryWrapper('${entryId}')">&times;</button>
         `;
         logList.appendChild(div);
       });
     }
 
-    // --- Chart Logic ---
-    function updateChart() {
-      const entries = getEntries();
-      
-      // Get last 7 days keys
+    function updateChart(entries) {
+      // Robust check for ctx, which is assigned in DOMContentLoaded
+      if (!ctx) {
+          console.error("Chart context (ctx) is not yet available.");
+          return;
+      }
+
       const days = [];
       for(let i=6; i>=0; i--) {
         const d = new Date();
@@ -546,7 +456,6 @@
         days.push(d.toLocaleDateString());
       }
 
-      // Initialize counts
       const data = {
         red: new Array(7).fill(0),
         yellow: new Array(7).fill(0),
@@ -554,7 +463,6 @@
         green: new Array(7).fill(0)
       };
 
-      // Aggregate data
       entries.forEach(e => {
         const eDate = new Date(e.timestamp).toLocaleDateString();
         const index = days.indexOf(eDate);
@@ -590,10 +498,105 @@
       });
     }
 
-    // --- Initialization ---
-    // Make deleteEntry globally accessible
-    window.deleteEntry = deleteEntry;
-    
+
+    // --- Event Listeners and Initializers ---
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Assign DOM elements now that the DOM is ready
+        quadrantSelect = document.getElementById('quadrant');
+        emotionSelect = document.getElementById('emotion');
+        form = document.getElementById('moodForm');
+        logList = document.getElementById('logList');
+        reminderTimeInput = document.getElementById('reminderTime');
+        
+        const canvas = document.getElementById('moodChart');
+        if (canvas) {
+            // This is the assignment that needs to happen AFTER the canvas element exists
+            ctx = canvas.getContext('2d');
+        } else {
+            console.error("Chart canvas not found. Charting functionality disabled.");
+        }
+        
+        initModalElements(); // Initialize modal elements
+
+        // Quadrant Change Listener
+        if (quadrantSelect) {
+            quadrantSelect.addEventListener('change', (e) => {
+                const selectedQuad = e.target.value;
+                emotionSelect.innerHTML = '<option value="">-- Select Emotion --</option>';
+                
+                if (selectedQuad && emotionMap[selectedQuad]) {
+                    emotionSelect.disabled = false;
+                    const sortedEmotions = [...emotionMap[selectedQuad]].sort();
+                    
+                    sortedEmotions.forEach(emo => {
+                        const opt = document.createElement('option');
+                        opt.value = emo;
+                        opt.textContent = emo;
+                        emotionSelect.appendChild(opt);
+                    });
+                } else {
+                    emotionSelect.disabled = true;
+                }
+            });
+        }
+
+        // Form Submit Listener
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const entry = {
+                    quadrant: quadrantSelect.value,
+                    emotion: emotionSelect.value,
+                    intensity: document.getElementById('intensity').value,
+                    tag: document.getElementById('tag').value,
+                    trigger: document.getElementById('trigger').value || 'N/A',
+                    note: document.getElementById('note').value || ''
+                };
+
+                await saveEntry(entry);
+                
+                form.reset();
+                // Safely update output element
+                const outputElement = document.querySelector('output');
+                if (outputElement) {
+                   outputElement.textContent = "5";
+                }
+                emotionSelect.disabled = true;
+                emotionSelect.innerHTML = '<option value="">-- Select Quadrant First --</option>';
+            });
+        }
+        
+        // Attach AI listener
+        const generateBtn = document.getElementById('generateInsightsBtn');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', generateInsights);
+        }
+        
+        // Attach Reminder listener
+        const reminderForm = document.getElementById('reminderForm');
+        if (reminderForm) {
+            reminderForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                scheduleDailyReminder(reminderTimeInput.value);
+            });
+        }
+
+        // Expose delete wrapper
+        window.deleteEntryWrapper = deleteEntry;
+        
+        // Load saved reminder time
+        loadReminderTime();
+
+        // NEW FIX: Initialize Firebase ONLY after all DOM elements are guaranteed to be available
+        initializeFirebase();
+        
+        // Request Notification Permission on load
+        requestNotificationPermission();
+    });
+
+
     // Register Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -603,10 +606,597 @@
       });
     }
 
-    // Initial Load
-    loadLogs();
-    updateChart();
-
   </script>
+
+  <style>
+    :root {
+      /* Brand Colors */
+      --brand-primary: #b425aa;
+      --brand-secondary: #c80ec9;
+      --brand-gold: #D4AF37;
+      
+      /* Quadrant Colors */
+      --red-bg: #ffebee; --red-text: #c62828; --red-border: #ef5350;
+      --yellow-bg: #fffde7; --yellow-text: #f9a825; --yellow-border: #fdd835;
+      --blue-bg: #e3f2fd; --blue-text: #1565c0; --blue-border: #42a5f5;
+      --green-bg: #e8f5e9; --green-text: #2e7d32; --green-border: #66bb6a;
+      
+      --dark: #333; --light: #fdfbfd; --white: #fff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Roboto Condensed', sans-serif;
+      background-color: var(--light);
+      color: var(--dark);
+      padding-bottom: 80px;
+    }
+
+    /* Brand Header */
+    header {
+      background: var(--white); /* CHANGED: White background */
+      color: var(--dark); /* CHANGED: Dark text for contrast */
+      padding: 1.5rem 1rem;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Softer shadow */
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 3px solid var(--brand-primary); /* Accent line */
+    }
+
+    .brand-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 0.5rem;
+    }
+
+    .brand-logo {
+      width: 45px;
+      height: 45px;
+      object-fit: contain;
+      /* CHANGED: Removed inverted filter so it looks normal on white background */
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+
+    header h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+      font-size: 1.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 0;
+      color: var(--brand-primary); /* CHANGED: Brand color for title */
+    }
+
+    header p {
+      color: #666; /* CHANGED: Dark grey for subtitle */
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: 0.5px;
+    }
+    
+    .user-info {
+        font-size: 0.75rem;
+        margin-top: 0.5rem;
+        color: #999; /* CHANGED: Lighter grey for user info */
+    }
+
+    main {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+
+    /* Sections */
+    section {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      border-top: 4px solid var(--brand-primary);
+    }
+
+    h2 {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--brand-primary);
+      border-bottom: 2px solid #eee;
+      padding-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    /* Small form for reminder */
+    #reminderForm {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    #reminderForm input[type="time"] {
+        flex-grow: 1;
+        max-width: 150px;
+        padding: 12px;
+        border-radius: 10px;
+    }
+    
+    #reminderForm button {
+        padding: 12px 20px;
+        margin-top: 0;
+        width: auto;
+    }
+
+
+    /* Mood Image */
+    .mood-image-container {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      /* New CSS for image fit */
+      height: 300px; /* Or a suitable fixed height */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden; /* Important to prevent overflow if image aspect ratio is different */
+    }
+    
+    .mood-image {
+      width: 100%;
+      height: 100%; /* Make image fill the container */
+      object-fit: contain; /* Ensures the image fits without cropping, maintaining aspect ratio */
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      border: 2px solid var(--brand-gold);
+    }
+
+    /* Quadrants Info */
+    .quadrants {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .quadrant {
+      padding: 1rem;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 1rem;
+      transition: transform 0.2s;
+    }
+    
+    .quadrant:hover { transform: translateY(-2px); }
+
+    .quadrant h3 { 
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 1.1rem; 
+      margin-bottom: 5px; 
+    }
+    
+    .red { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red-border); }
+    .yellow { background: var(--yellow-bg); color: var(--yellow-text); border: 1px solid var(--yellow-border); }
+    .blue { background: var(--blue-bg); color: var(--blue-text); border: 1px solid var(--blue-border); }
+    .green { background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green-border); }
+
+    /* Form */
+    form:not(#reminderForm) { display: grid; gap: 1.2rem; }
+    
+    label {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--brand-primary);
+      margin-bottom: 0.4rem;
+      display: block;
+    }
+
+    select, input:not([type="range"]), textarea {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #eee;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-family: 'Roboto Condensed', sans-serif;
+      background: #fafafa;
+      transition: border-color 0.3s;
+    }
+    
+    input[type="time"] {
+        padding: 12px;
+    }
+
+
+    select:focus, input:not([type="range"]):focus, textarea:focus {
+      outline: none;
+      border-color: var(--brand-secondary);
+      background: #fff;
+    }
+
+    button[type="submit"]:not(#reminderForm button), #generateInsightsBtn {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right, var(--brand-primary), var(--brand-secondary));
+      color: white;
+      border: none;
+      padding: 16px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: opacity 0.3s, transform 0.1s;
+      box-shadow: 0 4px 10px rgba(180, 37, 170, 0.4);
+      margin-top: 1rem;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+    
+    .input-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .intensity-control {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .intensity-control input[type="range"] {
+        flex-grow: 1;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 10px;
+        background: #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+        outline: none;
+    }
+
+    .intensity-control input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--brand-primary);
+        cursor: pointer;
+        box-shadow: 0 0 5px rgba(0,0,0,0.2);
+    }
+    
+    .intensity-control output {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 1.2rem;
+        color: var(--brand-secondary);
+        width: 30px;
+        text-align: right;
+    }
+    
+    /* Log History Styling */
+    .log-item {
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: box-shadow 0.3s;
+    }
+    
+    .log-item:hover {
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    .log-item h4 {
+        margin: 0 0 5px 0;
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.2rem;
+    }
+    
+    .log-item small {
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+
+    .log-meta {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 3px;
+    }
+    
+    .log-note {
+        margin-top: 10px;
+        padding-left: 10px;
+        border-left: 3px solid var(--brand-primary);
+        font-style: italic;
+        color: #555;
+        font-size: 0.9rem;
+    }
+    
+    .delete-btn {
+        background: none;
+        border: none;
+        color: var(--red-text);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        transition: transform 0.2s;
+        margin-left: 10px;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .delete-btn:hover {
+        transform: scale(1.1);
+        color: #ff0000;
+    }
+    
+    /* Chart Container for responsiveness */
+    .chart-container {
+        position: relative;
+        height: 300px; /* Fixed height for chart visibility */
+        width: 100%;
+    }
+    
+    /* AI Insights Styling */
+    .ai-result-box {
+        background: #f7f3f9;
+        border: 1px solid var(--brand-primary);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    .loading-spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-top: 4px solid var(--brand-primary);
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 1rem auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* Custom Modal Styles */
+    .modal {
+        display: none; 
+        position: fixed; 
+        z-index: 200; 
+        left: 0;
+        top: 0;
+        width: 100%; 
+        height: 100%; 
+        overflow: auto; 
+        background-color: rgba(0,0,0,0.4); 
+        justify-content: center;
+        align-items: center;
+        padding: 1rem;
+    }
+
+    .modal-content {
+        background-color: var(--white);
+        margin: auto;
+        padding: 20px;
+        border-radius: 15px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        text-align: center;
+        animation: modalopen 0.3s;
+    }
+    
+    @keyframes modalopen {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    #modalMessage p {
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+        color: var(--dark);
+    }
+
+    .modal-actions button {
+        margin: 0 10px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.2s;
+        box-shadow: none;
+        margin-top: 0;
+    }
+
+    #modalConfirm {
+        background-color: var(--red-text);
+        color: white;
+    }
+    
+    #modalConfirm[data-type="alert"] {
+        background: linear-gradient(to right, var(--brand-primary), var(--brand-secondary));
+    }
+
+    #modalCancel {
+        background-color: #ccc;
+        color: var(--dark);
+    }
+    
+    @media (max-width: 600px) {
+        main {
+            padding: 1rem;
+        }
+        
+        section {
+            padding: 1rem;
+        }
+        
+        .quadrants {
+            grid-template-columns: 1fr;
+        }
+        
+        .mood-image-container {
+            height: 250px;
+        }
+        
+        header h1 {
+            font-size: 1.5rem;
+        }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand-container">
+      <img src="https://appimize.app/assets/apps/user_1097/images/af5331a08cd5_576_1097.png" alt="App Logo" class="brand-logo">
+      <h1>Smart Emotion Tracker</h1> <!-- CHANGED TITLE -->
+    </div>
+    <p>Your Smart Companion for Emotional Wellness</p>
+    <div class="user-info">
+      User ID: <span id="userIdDisplay">Loading...</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- 1. Mood Entry Form -->
+    <section>
+      <h2>✍️ Log Your Mood</h2>
+      <form id="moodForm">
+        <div class="input-group">
+          <label for="quadrant">1. Choose Quadrant</label>
+          <select id="quadrant" required>
+            <option value="">-- Select Quadrant --</option>
+            <option value="red">Red (High Energy, Negative)</option>
+            <option value="yellow">Yellow (High Energy, Positive)</option>
+            <option value="blue">Blue (Low Energy, Negative)</option>
+            <option value="green">Green (Low Energy, Positive)</option>
+          </select>
+        </div>
+        
+        <div class="input-group">
+          <label for="emotion">2. Select Specific Emotion</label>
+          <select id="emotion" disabled required>
+            <option value="">-- Select Quadrant First --</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="intensity">3. Intensity Level (1-10)</label>
+          <div class="intensity-control">
+            <input type="range" id="intensity" min="1" max="10" value="5" oninput="document.querySelector('#intensity-output').value=this.value">
+            <output id="intensity-output">5</output>
+          </div>
+        </div>
+        
+        <div class="input-group">
+          <label for="tag">4. Activity/Context Tag</label>
+          <select id="tag" required>
+            <option value="Work">Work</option>
+            <option value="Family">Family/Relationship</option>
+            <option value="Health">Health/Exercise</option>
+            <option value="Leisure">Leisure/Hobby</option>
+            <option value="Sleep">Sleep/Rest</option>
+            <option value="Commute">Commute/Travel</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="trigger">5. What was the Trigger? (Optional)</label>
+          <input type="text" id="trigger" placeholder="Briefly describe what happened">
+        </div>
+
+        <div class="input-group">
+          <label for="note">6. Quick Note (Optional)</label>
+          <textarea id="note" rows="2" placeholder="Any further details or thoughts..."></textarea>
+        </div>
+
+        <button type="submit">Log My Mood</button>
+      </form>
+    </section>
+
+    <!-- 2. Mood Quadrant Chart (with user image) -->
+    <section>
+      <h2>🧠 Mood Quadrant Chart</h2>
+      <div class="mood-image-container">
+        <!-- Replaced placeholder with user's uploaded image path -->
+        <img src="https://cognitioplus.aiwaapp.live/cache/media_cache/d7f61d401424fdb850f47372842bbafa.png" alt="Emotion Quadrants" class="mood-image">
+      </div>
+      <div class="quadrants">
+        <div class="quadrant red"><h3>Red Zone</h3><p>High Energy, Negative Emotion (e.g., Anger, Anxiety)</p></div>
+        <div class="quadrant yellow"><h3>Yellow Zone</h3><p>High Energy, Positive Emotion (e.g., Excitement, Focus)</p></div>
+        <div class="quadrant blue"><h3>Blue Zone</h3><p>Low Energy, Negative Emotion (e.g., Sadness, Boredom)</p></div>
+        <div class="quadrant green"><h3>Green Zone</h3><p>Low Energy, Positive Emotion (e.g., Calm, Content)</p></div>
+      </div>
+    </section>
+
+    <!-- 3. AI Insights -->
+    <section>
+      <h2>💡 Personalized Insights</h2>
+      <button id="generateInsightsBtn">Generate Insights & Recommendations</button>
+      <div id="insightsOutput" style="margin-top: 1rem;">
+        <p style="text-align:center; color:#888;">AI insights will appear here after logging a few entries.</p>
+      </div>
+    </section>
+    
+    <!-- 4. Mood Data Chart (Chart.js) -->
+    <section>
+      <h2>📊 Weekly Mood Overview</h2>
+      <div class="chart-container">
+        <canvas id="moodChart"></canvas>
+      </div>
+    </section>
+
+    <!-- 5. Mood Log History -->
+    <section>
+      <h2>📜 Mood Log History</h2>
+      <div id="logList">
+        <!-- Logs populated by JS -->
+        <p style="text-align:center; color:#888;">Loading logs...</p>
+      </div>
+    </section>
+
+    <!-- 6. Daily Reminder -->
+    <section>
+        <h2>🔔 Daily Reminder</h2>
+        <form id="reminderForm">
+            <input type="time" id="reminderTime" required value="19:00">
+            <button type="submit">Set Reminder</button>
+        </form>
+    </section>
+  </main>
+  
+  <!-- Custom Modal for Alerts/Confirms (Hidden by default) -->
+  <div id="customModal" class="modal">
+    <div class="modal-content">
+      <div id="modalMessage"></div>
+      <div class="modal-actions">
+        <button id="modalCancel">Cancel</button>
+        <button id="modalConfirm">OK</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

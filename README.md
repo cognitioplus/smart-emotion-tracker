@@ -1,5 +1,5 @@
 #Smart Emotion Tracker#
-A web-based application designed for emotional healing and intelligence development. It appears to be a progressive web app (PWA) that enables users to track and monitor their emotions systematically. The project is in early development stage with core files including HTML interface, service worker for offline functionality, and manifest configuration for PWA support.
+A web-based application designed for emotional healing and intelligence development. It enables users to track and monitor their emotions systematically. The project is in early development stage with core files including HTML interface, service worker for offline functionality, and manifest configuration for PWA support.
 
 #Main Function Points
 Track and monitor personal emotions over time
@@ -13,4 +13,5 @@ JavaScript (5% of codebase)
 Progressive Web App (PWA) technology
 Service Workers for offline support
 License
-MIT License - Permissive open-source license allowing free use, modification, and distribution with minimal restrictions
+
+#MIT License - Permissive open-source license allowing free use, modification, and distribution with minimal restrictions

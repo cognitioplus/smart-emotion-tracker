@@ -10,7 +10,7 @@
   
   <!-- Fonts: Montserrat, Poppins, Roboto Condensed --><link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Poppins:wght@600&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Poppins:wght=600&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
   
   <!-- Chart.js --><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -559,7 +559,7 @@ Format your entire response using Markdown in this structure:
                 
                 form.reset();
                 // Safely update output element
-                const outputElement = document.querySelector('output');
+                const outputElement = document.querySelector('#intensity-output');
                 if (outputElement) {
                    outputElement.textContent = "5";
                 }
@@ -635,15 +635,15 @@ Format your entire response using Markdown in this structure:
 
     /* Brand Header */
     header {
-      background: var(--white); /* CHANGED: White background */
-      color: var(--dark); /* CHANGED: Dark text for contrast */
+      background: var(--white); 
+      color: var(--dark); 
       padding: 1.5rem 1rem;
       text-align: center;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* Softer shadow */
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); 
       position: sticky;
       top: 0;
       z-index: 100;
-      border-bottom: 3px solid var(--brand-primary); /* Accent line */
+      border-bottom: 3px solid var(--brand-primary); 
     }
 
     .brand-container {
@@ -658,7 +658,6 @@ Format your entire response using Markdown in this structure:
       width: 45px;
       height: 45px;
       object-fit: contain;
-      /* CHANGED: Removed inverted filter so it looks normal on white background */
       filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
     }
 
@@ -669,11 +668,11 @@ Format your entire response using Markdown in this structure:
       text-transform: uppercase;
       letter-spacing: 1px;
       margin: 0;
-      color: var(--brand-primary); /* CHANGED: Brand color for title */
+      color: var(--brand-primary); 
     }
 
     header p {
-      color: #666; /* CHANGED: Dark grey for subtitle */
+      color: #666; 
       font-family: 'Poppins', sans-serif;
       font-weight: 600;
       font-size: 0.9rem;
@@ -683,7 +682,7 @@ Format your entire response using Markdown in this structure:
     .user-info {
         font-size: 0.75rem;
         margin-top: 0.5rem;
-        color: #999; /* CHANGED: Lighter grey for user info */
+        color: #999; 
     }
 
     main {
@@ -739,18 +738,17 @@ Format your entire response using Markdown in this structure:
     .mood-image-container {
       text-align: center;
       margin-bottom: 1.5rem;
-      /* New CSS for image fit */
-      height: 300px; /* Or a suitable fixed height */
+      height: 300px; 
       display: flex;
       justify-content: center;
       align-items: center;
-      overflow: hidden; /* Important to prevent overflow if image aspect ratio is different */
+      overflow: hidden; 
     }
     
     .mood-image {
       width: 100%;
-      height: 100%; /* Make image fill the container */
-      object-fit: contain; /* Ensures the image fits without cropping, maintaining aspect ratio */
+      height: 100%; 
+      object-fit: contain; 
       border-radius: 12px;
       box-shadow: 0 8px 16px rgba(0,0,0,0.1);
       border: 2px solid var(--brand-gold);
@@ -773,13 +771,6 @@ Format your entire response using Markdown in this structure:
     
     .quadrant:hover { transform: translateY(-2px); }
 
-    .quadrant h3 { 
-      font-family: 'Poppins', sans-serif;
-      font-weight: 600;
-      font-size: 1.1rem; 
-      margin-bottom: 5px; 
-    }
-    
     .red { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red-border); }
     .yellow { background: var(--yellow-bg); color: var(--yellow-text); border: 1px solid var(--yellow-border); }
     .blue { background: var(--blue-bg); color: var(--blue-text); border: 1px solid var(--blue-border); }
@@ -788,14 +779,78 @@ Format your entire response using Markdown in this structure:
     /* Form */
     form:not(#reminderForm) { display: grid; gap: 1.2rem; }
     
-    label {
-      font-family: 'Poppins', sans-serif;
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: var(--brand-primary);
-      margin-bottom: 0.4rem;
-      display: block;
+    /* Tooltip Styles */
+    .tooltip-container {
+        position: relative;
+        display: block; /* Make the whole group a block element */
     }
+
+    .tooltip-trigger {
+        font-family: 'Poppins', sans-serif;
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--brand-primary);
+        margin-bottom: 0.4rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .info-icon {
+        cursor: pointer;
+        color: var(--brand-secondary);
+        font-size: 1.1rem;
+        line-height: 1;
+        transition: transform 0.2s;
+        font-family: Arial, sans-serif; /* Ensure the question mark renders cleanly */
+        font-style: normal;
+        user-select: none;
+    }
+    
+    .info-icon:hover {
+        transform: scale(1.1);
+    }
+
+    .tooltip-content {
+        visibility: hidden;
+        background-color: var(--dark);
+        color: var(--white);
+        text-align: left;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 1;
+        bottom: 100%; /* Position above the trigger */
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s, visibility 0.3s;
+        width: 250px;
+        font-size: 0.85rem;
+        font-family: 'Roboto Condensed', sans-serif;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .tooltip-content::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: var(--dark) transparent transparent transparent;
+    }
+
+    /* Show tooltip on hover or focus of the label/input container */
+    .tooltip-container:hover .tooltip-content,
+    .tooltip-container:focus-within .tooltip-content {
+        visibility: visible;
+        opacity: 1;
+        bottom: 110%; /* Move up slightly on hover */
+    }
+    /* End Tooltip Styles */
+
 
     select, input:not([type="range"]), textarea {
       width: 100%;
@@ -1064,14 +1119,36 @@ Format your entire response using Markdown in this structure:
         header h1 {
             font-size: 1.5rem;
         }
+        
+        /* Adjust tooltip on small screens */
+        .tooltip-content {
+            left: 0;
+            transform: translateX(0);
+            bottom: unset;
+            top: 100%;
+            margin-top: 5px;
+            width: 95%; /* Use full width */
+        }
+        
+        .tooltip-content::after {
+            top: -5px;
+            left: 25px; /* Adjust arrow position */
+            border-color: transparent transparent var(--dark) transparent;
+        }
+        
+        .tooltip-container:hover .tooltip-content,
+        .tooltip-container:focus-within .tooltip-content {
+            top: 105%;
+            bottom: unset;
+        }
     }
   </style>
 </head>
 <body>
   <header>
     <div class="brand-container">
-      <img src="https://placehold.co/45x45/b425aa/ffffff?text=E" alt="App Logo" class="brand-logo">
-      <h1>Smart Emotion Tracker</h1> <!-- CHANGED TITLE -->
+      <img src="https://appimize.app/assets/apps/user_1097/images/af5331a08cd5_576_1097.png" alt="App Logo" class="brand-logo">
+      <h1>Smart Emotion Tracker</h1>
     </div>
     <p>Your Smart Companion for Emotional Wellness</p>
     <div class="user-info">
@@ -1085,7 +1162,15 @@ Format your entire response using Markdown in this structure:
       <h2>✍️ Log Your Mood</h2>
       <form id="moodForm">
         <div class="input-group">
-          <label for="quadrant">1. Choose Quadrant</label>
+          <div class="tooltip-container">
+            <label for="quadrant" class="tooltip-trigger">
+              1. Choose Quadrant 
+              <span class="info-icon">?</span>
+              <div class="tooltip-content">
+                **The Energy/Valence Map:** Select the zone that best describes your feeling: **Red** (High Energy, Negative, e.g., Anxious), **Yellow** (High Energy, Positive, e.g., Excited), **Blue** (Low Energy, Negative, e.g., Sad), or **Green** (Low Energy, Positive, e.g., Calm).
+              </div>
+            </label>
+          </div>
           <select id="quadrant" required>
             <option value="">-- Select Quadrant --</option>
             <option value="red">Red (High Energy, Negative)</option>
@@ -1096,22 +1181,46 @@ Format your entire response using Markdown in this structure:
         </div>
         
         <div class="input-group">
-          <label for="emotion">2. Select Specific Emotion</label>
+          <div class="tooltip-container">
+            <label for="emotion" class="tooltip-trigger">
+              2. Select Specific Emotion 
+              <span class="info-icon">?</span>
+              <div class="tooltip-content">
+                From the list of emotions specific to your chosen quadrant, select the one that most accurately reflects your internal state right now.
+              </div>
+            </label>
+          </div>
           <select id="emotion" disabled required>
             <option value="">-- Select Quadrant First --</option>
           </select>
         </div>
 
         <div class="input-group">
-          <label for="intensity">3. Intensity Level (1-10)</label>
+          <div class="tooltip-container">
+            <label for="intensity" class="tooltip-trigger">
+              3. Intensity Level (1-10) 
+              <span class="info-icon">?</span>
+              <div class="tooltip-content">
+                Rate the strength of this emotion from 1 (Very Mild/Slight) to 10 (Overwhelming/Max Strength).
+              </div>
+            </label>
+          </div>
           <div class="intensity-control">
-            <input type="range" id="intensity" min="1" max="10" value="5" oninput="document.querySelector('#intensity-output').value=this.value">
+            <input type="range" id="intensity" min="1" max="10" value="5" oninput="document.querySelector('#intensity-output').textContent=this.value">
             <output id="intensity-output">5</output>
           </div>
         </div>
         
         <div class="input-group">
-          <label for="tag">4. Activity/Context Tag</label>
+          <div class="tooltip-container">
+            <label for="tag" class="tooltip-trigger">
+              4. Activity/Context Tag 
+              <span class="info-icon">?</span>
+              <div class="tooltip-content">
+                Categorize the main activity or setting where this emotion occurred. This helps identify where you are most frequently feeling certain emotions.
+              </div>
+            </label>
+          </div>
           <select id="tag" required>
             <option value="Work">Work</option>
             <option value="Family">Family/Relationship</option>
@@ -1124,12 +1233,28 @@ Format your entire response using Markdown in this structure:
         </div>
 
         <div class="input-group">
-          <label for="trigger">5. What was the Trigger? (Optional)</label>
+          <div class="tooltip-container">
+            <label for="trigger" class="tooltip-trigger">
+              5. What was the Trigger? (Optional) 
+              <span class="info-icon">?</span>
+              <div class="tooltip-content">
+                What specific event, thought, or interaction immediately preceded this mood? Be brief and specific (e.g., 'Deadline approaching', 'Argument with partner').
+              </div>
+            </label>
+          </div>
           <input type="text" id="trigger" placeholder="Briefly describe what happened">
         </div>
 
         <div class="input-group">
-          <label for="note">6. Quick Note (Optional)</label>
+          <div class="tooltip-container">
+            <label for="note" class="tooltip-trigger">
+              6. Quick Note (Optional) 
+              <span class="info-icon">?</span>
+              <div class="tooltip-content">
+                A space for journaling or elaborating on your thoughts. The AI uses this for deeper analysis.
+              </div>
+            </label>
+          </div>
           <textarea id="note" rows="2" placeholder="Any further details or thoughts..."></textarea>
         </div>
 
@@ -1142,7 +1267,7 @@ Format your entire response using Markdown in this structure:
       <h2>🧠 Mood Quadrant Chart</h2>
       <div class="mood-image-container">
         <!-- Replaced placeholder with user's uploaded image path -->
-        <img src="uploaded:image_919a65.png-22b38693-d8ef-4b3c-ab2f-a734307ada49" alt="Mood Quadrant Chart" class="mood-image">
+        <img src="https://cognitioplus.aiwaapp.live/cache/media_cache/d7f61d401424fdb850f47372842bbafa.png" alt="Mood Quadrant Chart" class="mood-image">
       </div>
       <div class="quadrants">
         <div class="quadrant red"><h3>Red Zone</h3><p>High Energy, Negative Emotion (e.g., Anger, Anxiety)</p></div>
@@ -1155,6 +1280,7 @@ Format your entire response using Markdown in this structure:
     <!-- 3. AI Insights -->
     <section>
       <h2>💡 Personalized Insights</h2>
+      <p style="margin-bottom: 1rem; font-size: 0.95rem; color: #555;">Generate your analysis based on the **Hawkins Map of Consciousness**. Requires at least 5 logged entries.</p>
       <button id="generateInsightsBtn">Generate Insights & Recommendations</button>
       <div id="insightsOutput" style="margin-top: 1rem;">
         <p style="text-align:center; color:#888;">AI insights will appear here after logging a few entries.</p>
@@ -1181,6 +1307,7 @@ Format your entire response using Markdown in this structure:
     <!-- 6. Daily Reminder -->
     <section>
         <h2>🔔 Daily Reminder</h2>
+        <p style="margin-bottom: 1rem; font-size: 0.95rem; color: #555;">Set a specific time to receive a notification reminding you to log your mood.</p>
         <form id="reminderForm">
             <input type="time" id="reminderTime" required value="19:00">
             <button type="submit">Set Reminder</button>
